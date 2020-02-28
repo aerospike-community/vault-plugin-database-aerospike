@@ -41,6 +41,9 @@ $ vault write database/config/aerospike \
 $ vault write -force database/rotate-root/aerospike
 ```
 
+If running the plugin on macOS you may run into an issue where the OS prevents it from being executed.
+See [How to open an app that hasn't been notarized or is from an unidentified developer](https://support.apple.com/en-us/HT202491) on Apple's support website to be able to run this.
+
 ## Usage
 
 ### Statements
