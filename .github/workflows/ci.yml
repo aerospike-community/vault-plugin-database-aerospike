@@ -1,0 +1,30 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Setup Go
+        uses: actions/setup-go@v1
+        with:
+          go-version: '1.13.8'
+      - name: Install gox
+        run: go get github.com/mitchellh/gox
+      - name: Build binaries in parallel
+        run: $HOME/go/bin/gox -osarch="linux/amd64 darwin/amd64 windows/386 windows/amd64" -output "build/vault-plugin-database-aerospike_${GITHUB_REF##*/}_{{.OS}}_{{.Arch}}/vault-plugin-database-aerospike" ./plugin
+      - name: Package binaries
+        run: cd build; for dir in *; do zip -r $dir.zip $dir; done
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: build/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
