@@ -1,0 +1,18 @@
+builds:
+  - main: ./plugin
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+      - windows
+archives:
+  - format: binary
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^\[docs\]'
