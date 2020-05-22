@@ -44,7 +44,8 @@ func new() *Aerospike {
 	credsProducer := &credsutil.SQLCredentialsProducer{
 		DisplayNameLen: 15,
 		RoleNameLen:    15,
-		UsernameLen:    100,
+		// See https://www.aerospike.com/docs/guide/limitations.html
+		UsernameLen:    63,
 		Separator:      "-",
 	}
 
