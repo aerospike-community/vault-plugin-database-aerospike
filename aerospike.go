@@ -30,23 +30,23 @@ type Aerospike struct {
 }
 
 // New returns a new Aerospike instance.
-func New() (interface{}, error) {
-	db := new()
+func New(clientFactory ClientFactory) (interface{}, error) {
+	db := new(clientFactory)
 	// Wrap the plugin with middleware to sanitize errors
 	dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.secretValues)
 	return dbType, nil
 }
 
-func new() *Aerospike {
-	connProducer := &aerospikeConnectionProducer{}
+func new(clientFactory ClientFactory) *Aerospike {
+	connProducer := newConnectionProducer(clientFactory)
 	connProducer.Type = aerospikeTypeName
 
 	credsProducer := &credsutil.SQLCredentialsProducer{
 		DisplayNameLen: 15,
 		RoleNameLen:    15,
 		// See https://www.aerospike.com/docs/guide/limitations.html
-		UsernameLen:    63,
-		Separator:      "-",
+		UsernameLen: 63,
+		Separator:   "-",
 	}
 
 	return &Aerospike{
@@ -57,7 +57,8 @@ func new() *Aerospike {
 
 // Run instantiates an Aerospike object, and runs the RPC server for the plugin.
 func Run(apiTLSConfig *api.TLSConfig) error {
-	dbType, err := New()
+	clientFactory := &aerospikeClientFactory{}
+	dbType, err := New(clientFactory)
 	if err != nil {
 		return err
 	}
@@ -72,13 +73,13 @@ func (a *Aerospike) Type() (string, error) {
 	return aerospikeTypeName, nil
 }
 
-func (a *Aerospike) getConnection(ctx context.Context) (*aerospike.Client, error) {
+func (a *Aerospike) getConnection(ctx context.Context) (Client, error) {
 	client, err := a.Connection(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	return client.(*aerospike.Client), nil
+	return client.(Client), nil
 }
 
 // CreateUser generates the username/password on the underlying Aerospike
@@ -207,4 +208,22 @@ func (a *Aerospike) RotateRootCredentials(ctx context.Context, statements []stri
 
 	a.RawConfig["password"] = password
 	return a.RawConfig, nil
+}
+
+type Client interface {
+	IsConnected() bool
+	Close()
+	CreateUser(policy *aerospike.AdminPolicy, user string, password string, roles []string) error
+	DropUser(policy *aerospike.AdminPolicy, user string) error
+	ChangePassword(policy *aerospike.AdminPolicy, user string, password string) error
+}
+
+type ClientFactory interface {
+	NewClientWithPolicyAndHost(clientPolicy *aerospike.ClientPolicy, hosts ...*aerospike.Host) (Client, error)
+}
+
+type aerospikeClientFactory struct{}
+
+func (aerospikeClientFactory) NewClientWithPolicyAndHost(clientPolicy *aerospike.ClientPolicy, hosts ...*aerospike.Host) (Client, error) {
+	return aerospike.NewClientWithPolicyAndHost(clientPolicy, hosts...)
 }

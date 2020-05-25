@@ -26,13 +26,20 @@ type aerospikeConnectionProducer struct {
 	TLSCertificateKeyData []byte `json:"tls_certificate_key" structs:"-" mapstructure:"tls_certificate_key"`
 	TLSCAData             []byte `json:"tls_ca"              structs:"-" mapstructure:"tls_ca"`
 
-	Initialized  bool
-	RawConfig    map[string]interface{}
-	Type         string
-	hosts        []*aerospike.Host
-	clientPolicy *aerospike.ClientPolicy
-	client       *aerospike.Client
+	ClientFactory ClientFactory
+	Initialized   bool
+	RawConfig     map[string]interface{}
+	Type          string
+	hosts         []*aerospike.Host
+	clientPolicy  *aerospike.ClientPolicy
+	client        Client
 	sync.Mutex
+}
+
+func newConnectionProducer(clientFactory ClientFactory) *aerospikeConnectionProducer {
+	return &aerospikeConnectionProducer{
+		ClientFactory: clientFactory,
+	}
 }
 
 func (c *aerospikeConnectionProducer) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) error {
@@ -115,7 +122,7 @@ func (c *aerospikeConnectionProducer) Connection(ctx context.Context) (interface
 	}
 
 	var err error
-	c.client, err = aerospike.NewClientWithPolicyAndHost(c.clientPolicy, c.hosts...)
+	c.client, err = c.ClientFactory.NewClientWithPolicyAndHost(c.clientPolicy, c.hosts...)
 	if err != nil {
 		return nil, err
 	}

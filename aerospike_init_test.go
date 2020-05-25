@@ -86,7 +86,7 @@ func TestPluginInitWithInvalidClientKey(t *testing.T) {
 }
 
 func testPluginInitSuccess(t *testing.T, config map[string]interface{}) {
-	aerospike, err := plugin.New()
+	aerospike, err := plugin.New(&MockClientFactory{})
 	if err != nil {
 		t.Errorf("Error creating Aerospike plugin: %s", err)
 	}
@@ -102,7 +102,7 @@ func testPluginInitSuccess(t *testing.T, config map[string]interface{}) {
 }
 
 func testPluginInitFailure(t *testing.T, config map[string]interface{}, expectedMessage string) {
-	aerospike, err := plugin.New()
+	aerospike, err := plugin.New(&MockClientFactory{})
 	if err != nil {
 		t.Errorf("Error creating Aerospike plugin: %s", err)
 	}
