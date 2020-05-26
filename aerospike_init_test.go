@@ -28,7 +28,7 @@ func TestPluginInit(t *testing.T) {
 	testPluginInitSuccess(t, config, clientFactory, false)
 
 	if clientCreated {
-		t.Error("Expected client to not have been created")
+		t.Fatal("Expected no client to have been created")
 	}
 }
 
@@ -54,7 +54,7 @@ func TestPluginInitWithVerify(t *testing.T) {
 	testPluginInitSuccess(t, config, clientFactory, true)
 
 	if !clientCreated {
-		t.Error("Expected client to have been created")
+		t.Fatal("Expected client to have been created")
 	}
 	if createdClientUsername != username {
 		t.Errorf("Expected client to be created with username '%s' but was '%s'", username, createdClientUsername)
@@ -114,18 +114,21 @@ func TestPluginInitHost(t *testing.T) {
 		testPluginInitSuccess(t, config, clientFactory, true)
 
 		if !clientCreated {
-			t.Error("Expected client to have been created")
+			t.Errorf("Expected client to have been created for test case '%s'", hostString)
+			continue
 		}
 		if len(clientHosts) != len(expectedHosts) {
-			t.Errorf("Expected client to be created with %d hosts but got %d hosts", len(expectedHosts), len(clientHosts))
+			t.Errorf("Expected client to be created with %d hosts but got %d hosts for test case '%s'",
+				len(expectedHosts), len(clientHosts), hostString)
+			continue
 		}
 		for i, expectedHost := range expectedHosts {
 			clientHost := clientHosts[i]
 			if !(clientHost.Name == expectedHost.Name &&
 				clientHost.TLSName == expectedHost.TLSName &&
 				clientHost.Port == expectedHost.Port) {
-				t.Errorf("Expected client to be created with host %s but got %s",
-					formatHost(&expectedHost), formatHost(clientHost))
+				t.Errorf("Expected client %d to be created with host %s but got %s for test case '%s'",
+					i, formatHost(&expectedHost), formatHost(clientHost), hostString)
 			}
 		}
 	}
@@ -194,7 +197,7 @@ func testPluginInitSuccess(t *testing.T, config map[string]interface{}, clientFa
 	ctx := context.Background()
 	saveConfig, err := aerospikePlugin.Init(ctx, config, verify)
 	if err != nil {
-		t.Errorf("Error initialising Aerospike plugin: %s", err)
+		t.Fatalf("Error initialising Aerospike plugin: %s", err)
 	}
 	if !reflect.DeepEqual(saveConfig, config) {
 		t.Error("Expected config returned from Init to be the same as the passed config")
@@ -213,9 +216,9 @@ func testPluginInitFailure(t *testing.T, config map[string]interface{}, expected
 		t.Error("Expected config returned from Init to be nil")
 	}
 	if err == nil {
-		t.Errorf("Expected an error initialising Aerospike plugin")
+		t.Errorf("Expected an error initialising the Aerospike plugin but there was none")
 	} else if !strings.Contains(err.Error(), expectedMessage) {
-		t.Errorf("Expected error containing '%s' but got '%s'", expectedMessage, err.Error())
+		t.Errorf("Expected an error message containing '%s' but got '%s'", expectedMessage, err.Error())
 	}
 }
 
