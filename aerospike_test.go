@@ -2,6 +2,7 @@ package aerospike_test
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -17,11 +18,12 @@ func TestCreateUser(t *testing.T) {
 	createdPassword := ""
 	createdRoles := []string{}
 	clientFactory := &MockClientFactory{
-		OnCreateUser: func(user string, password string, roles []string) {
+		OnCreateUser: func(user string, password string, roles []string) error {
 			userCreated = true
 			createdUsername = user
 			createdPassword = password
 			createdRoles = roles
+			return nil
 		},
 	}
 	plugin := initialisePlugin(t, clientFactory)
@@ -57,8 +59,9 @@ func TestCreateUser(t *testing.T) {
 func TestCreateUserWithName(t *testing.T) {
 	userCreated := false
 	clientFactory := &MockClientFactory{
-		OnCreateUser: func(user string, password string, roles []string) {
+		OnCreateUser: func(user string, password string, roles []string) error {
 			userCreated = true
+			return nil
 		},
 	}
 	plugin := initialisePlugin(t, clientFactory)
@@ -92,8 +95,9 @@ func TestCreateUserWithName(t *testing.T) {
 func TestCreateUserWithoutCreateStatement(t *testing.T) {
 	userCreated := false
 	clientFactory := &MockClientFactory{
-		OnCreateUser: func(user string, password string, roles []string) {
+		OnCreateUser: func(user string, password string, roles []string) error {
 			userCreated = true
+			return nil
 		},
 	}
 	plugin := initialisePlugin(t, clientFactory)
@@ -106,6 +110,9 @@ func TestCreateUserWithoutCreateStatement(t *testing.T) {
 	_, _, err := plugin.CreateUser(ctx, statements, usernameConfig, expiration)
 
 	expectedError := dbutil.ErrEmptyCreationStatement.Error()
+	if err == nil {
+		t.Errorf("Expected error to be non nil")
+	}
 	if err.Error() != expectedError {
 		t.Errorf("Expected error '%s' but was '%s'", expectedError, err.Error())
 	}
@@ -117,8 +124,9 @@ func TestCreateUserWithoutCreateStatement(t *testing.T) {
 func TestCreateUserWithInvalidJsonStatement(t *testing.T) {
 	userCreated := false
 	clientFactory := &MockClientFactory{
-		OnCreateUser: func(user string, password string, roles []string) {
+		OnCreateUser: func(user string, password string, roles []string) error {
 			userCreated = true
+			return nil
 		},
 	}
 	plugin := initialisePlugin(t, clientFactory)
@@ -143,8 +151,9 @@ func TestCreateUserWithInvalidJsonStatement(t *testing.T) {
 func TestCreateUserWithEmptyRoles(t *testing.T) {
 	userCreated := false
 	clientFactory := &MockClientFactory{
-		OnCreateUser: func(user string, password string, roles []string) {
+		OnCreateUser: func(user string, password string, roles []string) error {
 			userCreated = true
+			return nil
 		},
 	}
 	plugin := initialisePlugin(t, clientFactory)
@@ -159,6 +168,9 @@ func TestCreateUserWithEmptyRoles(t *testing.T) {
 	_, _, err := plugin.CreateUser(ctx, statements, usernameConfig, expiration)
 
 	expectedError := "roles array is required in creation statement"
+	if err == nil {
+		t.Errorf("Expected error to be non nil")
+	}
 	if err.Error() != expectedError {
 		t.Errorf("Expected error '%s' but was '%s'", expectedError, err.Error())
 	}
@@ -167,15 +179,42 @@ func TestCreateUserWithEmptyRoles(t *testing.T) {
 	}
 }
 
+func TestCreateUserWithDbError(t *testing.T) {
+	errorMessage := "Aerospike error creating user"
+	clientFactory := &MockClientFactory{
+		OnCreateUser: func(user string, password string, roles []string) error {
+			return errors.New(errorMessage)
+		},
+	}
+	plugin := initialisePlugin(t, clientFactory)
+
+	ctx := context.Background()
+	expiration := time.Date(2020, 5, 26, 0, 0, 0, 0, time.UTC)
+	statements := dbplugin.Statements{
+		Creation: []string{`{ "roles": ["read", "user-admin"] }`},
+	}
+	usernameConfig := dbplugin.UsernameConfig{}
+
+	_, _, err := plugin.CreateUser(ctx, statements, usernameConfig, expiration)
+
+	if err == nil {
+		t.Errorf("Expected error to be non nil")
+	}
+	if err.Error() != errorMessage {
+		t.Errorf("Expected error '%s' but was '%s'", errorMessage, err.Error())
+	}
+}
+
 func TestSetCredentials(t *testing.T) {
 	passwordChanged := false
 	changePasswordUser := ""
 	changePasswordPassword := ""
 	clientFactory := &MockClientFactory{
-		OnChangePassword: func(user string, password string) {
+		OnChangePassword: func(user string, password string) error {
 			passwordChanged = true
 			changePasswordUser = user
 			changePasswordPassword = password
+			return nil
 		},
 	}
 	plugin := initialisePlugin(t, clientFactory)
@@ -211,6 +250,32 @@ func TestSetCredentials(t *testing.T) {
 	}
 }
 
+func TestSetCredentialsWithDbError(t *testing.T) {
+	errorMessage := "Aerospike error changing password"
+	clientFactory := &MockClientFactory{
+		OnChangePassword: func(user string, password string) error {
+			return errors.New(errorMessage)
+		},
+	}
+	plugin := initialisePlugin(t, clientFactory)
+
+	ctx := context.Background()
+	statements := dbplugin.Statements{}
+	user := dbplugin.StaticUserConfig{
+		Username: "test_user",
+		Password: "test_password",
+	}
+
+	_, _, err := plugin.SetCredentials(ctx, statements, user)
+
+	if err == nil {
+		t.Errorf("Expected error to be non nil")
+	}
+	if err.Error() != errorMessage {
+		t.Errorf("Expected error '%s' but was '%s'", errorMessage, err.Error())
+	}
+}
+
 func TestRenewUser(t *testing.T) {
 	clientFactory := &MockClientFactory{}
 	plugin := initialisePlugin(t, clientFactory)
@@ -230,9 +295,10 @@ func TestRevokeUser(t *testing.T) {
 	userDropped := false
 	droppedUser := ""
 	clientFactory := &MockClientFactory{
-		OnDropUser: func(user string) {
+		OnDropUser: func(user string) error {
 			userDropped = true
 			droppedUser = user
+			return nil
 		},
 	}
 	plugin := initialisePlugin(t, clientFactory)
@@ -254,25 +320,42 @@ func TestRevokeUser(t *testing.T) {
 	}
 }
 
+func TestRevokeUserWithDbError(t *testing.T) {
+	errorMessage := "Aerospike error dropping user"
+	clientFactory := &MockClientFactory{
+		OnDropUser: func(user string) error {
+			return errors.New(errorMessage)
+		},
+	}
+	plugin := initialisePlugin(t, clientFactory)
+
+	err := plugin.RevokeUser(context.Background(), dbplugin.Statements{}, "test_user")
+
+	if err == nil {
+		t.Errorf("Expected error to be non nil")
+	}
+	if err.Error() != errorMessage {
+		t.Errorf("Expected error '%s' but was '%s'", errorMessage, err.Error())
+	}
+}
+
 func TestRotateRootCredentials(t *testing.T) {
 	passwordChanged := false
 	changePasswordUser := ""
 	changePasswordPassword := ""
 	clientFactory := &MockClientFactory{
-		OnChangePassword: func(user string, password string) {
+		OnChangePassword: func(user string, password string) error {
 			passwordChanged = true
 			changePasswordUser = user
 			changePasswordPassword = password
+			return nil
 		},
 	}
 	plugin := initialisePlugin(t, clientFactory)
 
-	ctx := context.Background()
-	statements := []string{}
+	newConfig, err := plugin.RotateRootCredentials(context.Background(), []string{})
+
 	expectedUser := "test_admin_user"
-
-	newConfig, err := plugin.RotateRootCredentials(ctx, statements)
-
 	if err != nil {
 		t.Errorf("Error rotating root credentials: %s", err)
 	}
@@ -287,6 +370,25 @@ func TestRotateRootCredentials(t *testing.T) {
 	}
 	if changePasswordPassword != newConfig["password"] {
 		t.Errorf("Expected new password '%s' to match the password in the returned config '%s'", changePasswordPassword, newConfig["password"])
+	}
+}
+
+func TestRotateRootCredentialsWithDbError(t *testing.T) {
+	errorMessage := "Aerospike error changing password"
+	clientFactory := &MockClientFactory{
+		OnChangePassword: func(user string, password string) error {
+			return errors.New(errorMessage)
+		},
+	}
+	plugin := initialisePlugin(t, clientFactory)
+
+	_, err := plugin.RotateRootCredentials(context.Background(), []string{})
+
+	if err == nil {
+		t.Errorf("Expected error to be non nil")
+	}
+	if err.Error() != errorMessage {
+		t.Errorf("Expected error '%s' but was '%s'", errorMessage, err.Error())
 	}
 }
 
