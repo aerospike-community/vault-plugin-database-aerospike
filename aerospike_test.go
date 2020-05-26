@@ -226,6 +226,34 @@ func TestRenewUser(t *testing.T) {
 	}
 }
 
+func TestRevokeUser(t *testing.T) {
+	userDropped := false
+	droppedUser := ""
+	clientFactory := &MockClientFactory{
+		OnDropUser: func(user string) {
+			userDropped = true
+			droppedUser = user
+		},
+	}
+	plugin := initialisePlugin(t, clientFactory)
+
+	ctx := context.Background()
+	statements := dbplugin.Statements{}
+	userToDrop := "test_user"
+
+	err := plugin.RevokeUser(ctx, statements, userToDrop)
+
+	if err != nil {
+		t.Errorf("Error revoking user: %s", err)
+	}
+	if !userDropped {
+		t.Error("User was not dropped")
+	}
+	if droppedUser != userToDrop {
+		t.Errorf("Expected dropped user to be '%s' but was '%s'", userToDrop, droppedUser)
+	}
+}
+
 func initialisePlugin(t *testing.T, clientFactory *MockClientFactory) dbplugin.Database {
 	aerospike, err := plugin.New(clientFactory)
 	if err != nil {
