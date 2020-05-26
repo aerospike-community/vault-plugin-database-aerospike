@@ -395,7 +395,7 @@ func TestRotateRootCredentialsWithDbError(t *testing.T) {
 func initialisePlugin(t *testing.T, clientFactory *MockClientFactory) dbplugin.Database {
 	aerospike, err := plugin.New(clientFactory)
 	if err != nil {
-		t.Errorf("Error creating Aerospike plugin: %s", err)
+		t.Fatalf("Error creating Aerospike plugin: %s", err)
 	}
 	aerospikePlugin := aerospike.(dbplugin.Database)
 	ctx := context.Background()
@@ -406,7 +406,7 @@ func initialisePlugin(t *testing.T, clientFactory *MockClientFactory) dbplugin.D
 	}
 	_, err = aerospikePlugin.Init(ctx, config, false)
 	if err != nil {
-		t.Errorf("Error initialising Aerospike plugin: %s", err)
+		t.Fatalf("Error initialising Aerospike plugin: %s", err)
 	}
 	return aerospikePlugin
 }
