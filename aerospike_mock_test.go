@@ -6,16 +6,19 @@ import (
 )
 
 type MockClient struct {
-	OnCreateUser func(user string, password string, roles []string)
+	OnCreateUser     func(user string, password string, roles []string)
+	OnChangePassword func(user string, password string)
 }
 
 type MockClientFactory struct {
-	OnCreateUser func(user string, password string, roles []string)
+	OnCreateUser     func(user string, password string, roles []string)
+	OnChangePassword func(user string, password string)
 }
 
 func (f *MockClientFactory) NewClientWithPolicyAndHost(clientPolicy *aerospike.ClientPolicy, hosts ...*aerospike.Host) (plugin.Client, error) {
 	client := &MockClient{
-		OnCreateUser: f.OnCreateUser,
+		OnCreateUser:     f.OnCreateUser,
+		OnChangePassword: f.OnChangePassword,
 	}
 	return client, nil
 }
@@ -37,6 +40,9 @@ func (*MockClient) DropUser(policy *aerospike.AdminPolicy, user string) error {
 	return nil
 }
 
-func (*MockClient) ChangePassword(policy *aerospike.AdminPolicy, user string, password string) error {
+func (c *MockClient) ChangePassword(policy *aerospike.AdminPolicy, user string, password string) error {
+	if c.OnChangePassword != nil {
+		c.OnChangePassword(user, password)
+	}
 	return nil
 }

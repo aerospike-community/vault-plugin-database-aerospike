@@ -167,6 +167,50 @@ func TestCreateUserWithEmptyRoles(t *testing.T) {
 	}
 }
 
+func TestSetCredentials(t *testing.T) {
+	passwordChanged := false
+	changePasswordUser := ""
+	changePasswordPassword := ""
+	clientFactory := &MockClientFactory{
+		OnChangePassword: func(user string, password string) {
+			passwordChanged = true
+			changePasswordUser = user
+			changePasswordPassword = password
+		},
+	}
+	plugin := initialisePlugin(t, clientFactory)
+
+	ctx := context.Background()
+	statements := dbplugin.Statements{}
+	expectedUser := "test_user"
+	expectedPassword := "test_password"
+	user := dbplugin.StaticUserConfig{
+		Username: expectedUser,
+		Password: expectedPassword,
+	}
+
+	username, password, err := plugin.SetCredentials(ctx, statements, user)
+
+	if err != nil {
+		t.Errorf("Error creating user: %s", err)
+	}
+	if !passwordChanged {
+		t.Error("Password was not changed")
+	}
+	if changePasswordUser != expectedUser {
+		t.Errorf("Expected ChangePassword to be called with user '%s' but was '%s'", expectedUser, changePasswordUser)
+	}
+	if changePasswordPassword != expectedPassword {
+		t.Errorf("Expected ChangePassword to be called with user '%s' but was '%s'", expectedPassword, changePasswordPassword)
+	}
+	if username != expectedUser {
+		t.Errorf("Expected returned user to be '%s' but was '%s'", expectedUser, changePasswordUser)
+	}
+	if password != expectedPassword {
+		t.Errorf("Expected returned password to be '%s' but was '%s'", expectedPassword, changePasswordPassword)
+	}
+}
+
 func initialisePlugin(t *testing.T, clientFactory *MockClientFactory) dbplugin.Database {
 	aerospike, err := plugin.New(clientFactory)
 	if err != nil {
