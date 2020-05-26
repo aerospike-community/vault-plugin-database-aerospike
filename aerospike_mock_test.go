@@ -5,13 +5,20 @@ import (
 	"github.com/aerospike/aerospike-client-go"
 )
 
-type MockClientFactory struct{}
-
-func (*MockClientFactory) NewClientWithPolicyAndHost(clientPolicy *aerospike.ClientPolicy, hosts ...*aerospike.Host) (plugin.Client, error) {
-	return &MockClient{}, nil
+type MockClient struct {
+	OnCreateUser func(user string, password string, roles []string)
 }
 
-type MockClient struct{}
+type MockClientFactory struct {
+	OnCreateUser func(user string, password string, roles []string)
+}
+
+func (f *MockClientFactory) NewClientWithPolicyAndHost(clientPolicy *aerospike.ClientPolicy, hosts ...*aerospike.Host) (plugin.Client, error) {
+	client := &MockClient{
+		OnCreateUser: f.OnCreateUser,
+	}
+	return client, nil
+}
 
 func (*MockClient) IsConnected() bool {
 	return true
@@ -19,7 +26,10 @@ func (*MockClient) IsConnected() bool {
 
 func (*MockClient) Close() {}
 
-func (*MockClient) CreateUser(policy *aerospike.AdminPolicy, user string, password string, roles []string) error {
+func (c *MockClient) CreateUser(policy *aerospike.AdminPolicy, user string, password string, roles []string) error {
+	if c.OnCreateUser != nil {
+		c.OnCreateUser(user, password, roles)
+	}
 	return nil
 }
 
