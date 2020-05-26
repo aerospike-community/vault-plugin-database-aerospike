@@ -2,11 +2,13 @@ package aerospike_test
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
 
 	plugin "github.com/G-Research/vault-plugin-database-aerospike"
+	"github.com/aerospike/aerospike-client-go"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
 )
 
@@ -16,7 +18,50 @@ func TestPluginInit(t *testing.T) {
 		"username": "test_user",
 		"password": "test_password",
 	}
-	testPluginInitSuccess(t, config)
+	clientCreated := false
+	clientFactory := &MockClientFactory{
+		OnNewClient: func(clientPolicy *aerospike.ClientPolicy, hosts ...*aerospike.Host) {
+			clientCreated = true
+		},
+	}
+
+	testPluginInitSuccess(t, config, clientFactory, false)
+
+	if clientCreated {
+		t.Error("Expected client to not have been created")
+	}
+}
+
+func TestPluginInitWithVerify(t *testing.T) {
+	username := "test_user"
+	password := "test_password"
+	config := map[string]interface{}{
+		"host":     "test_host:3000",
+		"username": username,
+		"password": password,
+	}
+	clientCreated := false
+	createdClientUsername := ""
+	createdClientPassword := ""
+	clientFactory := &MockClientFactory{
+		OnNewClient: func(clientPolicy *aerospike.ClientPolicy, hosts ...*aerospike.Host) {
+			clientCreated = true
+			createdClientUsername = clientPolicy.User
+			createdClientPassword = clientPolicy.Password
+		},
+	}
+
+	testPluginInitSuccess(t, config, clientFactory, true)
+
+	if !clientCreated {
+		t.Error("Expected client to have been created")
+	}
+	if createdClientUsername != username {
+		t.Errorf("Expected client to be created with username '%s' but was '%s'", username, createdClientUsername)
+	}
+	if createdClientPassword != password {
+		t.Errorf("Expected client to be created with password '%s' but was '%s'", password, createdClientPassword)
+	}
 }
 
 func TestPluginInitWithTlsCa(t *testing.T) {
@@ -26,7 +71,7 @@ func TestPluginInitWithTlsCa(t *testing.T) {
 		"password": "test_password",
 		"tls_ca":   testCaCert,
 	}
-	testPluginInitSuccess(t, config)
+	testPluginInitSuccess(t, config, &MockClientFactory{}, false)
 }
 
 func TestPluginInitWithTlsCaAndClientCert(t *testing.T) {
@@ -37,7 +82,53 @@ func TestPluginInitWithTlsCaAndClientCert(t *testing.T) {
 		"tls_ca":              testCaCert,
 		"tls_certificate_key": testClientCert + "\n" + testClientKey,
 	}
-	testPluginInitSuccess(t, config)
+	testPluginInitSuccess(t, config, &MockClientFactory{}, false)
+}
+
+func TestPluginInitHost(t *testing.T) {
+	testCases := map[string]([]aerospike.Host){
+		"test_host":               []aerospike.Host{{Name: "test_host", TLSName: "", Port: 3000}},
+		"test_host:3000":          []aerospike.Host{{Name: "test_host", TLSName: "", Port: 3000}},
+		"test_host:3123":          []aerospike.Host{{Name: "test_host", TLSName: "", Port: 3123}},
+		"test_host:tls_name:3000": []aerospike.Host{{Name: "test_host", TLSName: "tls_name", Port: 3000}},
+		"test_host_1,test_host_2": []aerospike.Host{{Name: "test_host_1", TLSName: "", Port: 3000}, {Name: "test_host_2", TLSName: "", Port: 3000}},
+		"test_host_1:tls_name_1:3001,test_host_2:tls_name_2:3002": []aerospike.Host{
+			{Name: "test_host_1", TLSName: "tls_name_1", Port: 3001},
+			{Name: "test_host_2", TLSName: "tls_name_2", Port: 3002}},
+	}
+	for hostString, expectedHosts := range testCases {
+		config := map[string]interface{}{
+			"host":     hostString,
+			"username": "test_user",
+			"password": "test_password",
+		}
+		clientCreated := false
+		clientHosts := []*aerospike.Host{}
+		clientFactory := &MockClientFactory{
+			OnNewClient: func(clientPolicy *aerospike.ClientPolicy, hosts ...*aerospike.Host) {
+				clientCreated = true
+				clientHosts = hosts
+			},
+		}
+
+		testPluginInitSuccess(t, config, clientFactory, true)
+
+		if !clientCreated {
+			t.Error("Expected client to have been created")
+		}
+		if len(clientHosts) != len(expectedHosts) {
+			t.Errorf("Expected client to be created with %d hosts but got %d hosts", len(expectedHosts), len(clientHosts))
+		}
+		for i, expectedHost := range expectedHosts {
+			clientHost := clientHosts[i]
+			if !(clientHost.Name == expectedHost.Name &&
+				clientHost.TLSName == expectedHost.TLSName &&
+				clientHost.Port == expectedHost.Port) {
+				t.Errorf("Expected client to be created with host %s but got %s",
+					formatHost(&expectedHost), formatHost(clientHost))
+			}
+		}
+	}
 }
 
 func TestPluginInitWithMissingHost(t *testing.T) {
@@ -46,6 +137,15 @@ func TestPluginInitWithMissingHost(t *testing.T) {
 		"password": "test_password",
 	}
 	testPluginInitFailure(t, config, "host cannot be empty")
+}
+
+func TestPluginInitWithInvalidHost(t *testing.T) {
+	config := map[string]interface{}{
+		"host":     "a:b:c:d:e:f",
+		"username": "test_user",
+		"password": "test_password",
+	}
+	testPluginInitFailure(t, config, "too many components for host #1")
 }
 
 func TestPluginInitWithMissingUser(t *testing.T) {
@@ -85,14 +185,14 @@ func TestPluginInitWithInvalidClientKey(t *testing.T) {
 	testPluginInitFailure(t, config, "unable to load tls_certificate_key_data")
 }
 
-func testPluginInitSuccess(t *testing.T, config map[string]interface{}) {
-	aerospike, err := plugin.New(&MockClientFactory{})
+func testPluginInitSuccess(t *testing.T, config map[string]interface{}, clientFactory *MockClientFactory, verify bool) {
+	aerospike, err := plugin.New(clientFactory)
 	if err != nil {
 		t.Errorf("Error creating Aerospike plugin: %s", err)
 	}
 	aerospikePlugin := aerospike.(dbplugin.Database)
 	ctx := context.Background()
-	saveConfig, err := aerospikePlugin.Init(ctx, config, false)
+	saveConfig, err := aerospikePlugin.Init(ctx, config, verify)
 	if err != nil {
 		t.Errorf("Error initialising Aerospike plugin: %s", err)
 	}
@@ -117,6 +217,10 @@ func testPluginInitFailure(t *testing.T, config map[string]interface{}, expected
 	} else if !strings.Contains(err.Error(), expectedMessage) {
 		t.Errorf("Expected error containing '%s' but got '%s'", expectedMessage, err.Error())
 	}
+}
+
+func formatHost(host *aerospike.Host) string {
+	return fmt.Sprintf("%s:%s:%d", host.Name, host.TLSName, host.Port)
 }
 
 const testCaCert = `-----BEGIN CERTIFICATE-----

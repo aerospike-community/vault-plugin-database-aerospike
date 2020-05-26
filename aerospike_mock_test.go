@@ -12,12 +12,16 @@ type MockClient struct {
 }
 
 type MockClientFactory struct {
+	OnNewClient      func(clientPolicy *aerospike.ClientPolicy, hosts ...*aerospike.Host)
 	OnCreateUser     func(user string, password string, roles []string) error
 	OnChangePassword func(user string, password string) error
 	OnDropUser       func(user string) error
 }
 
 func (f *MockClientFactory) NewClientWithPolicyAndHost(clientPolicy *aerospike.ClientPolicy, hosts ...*aerospike.Host) (plugin.Client, error) {
+	if f.OnNewClient != nil {
+		f.OnNewClient(clientPolicy, hosts...)
+	}
 	client := &MockClient{
 		OnCreateUser:     f.OnCreateUser,
 		OnChangePassword: f.OnChangePassword,
