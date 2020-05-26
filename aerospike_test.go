@@ -211,6 +211,21 @@ func TestSetCredentials(t *testing.T) {
 	}
 }
 
+func TestRenewUser(t *testing.T) {
+	clientFactory := &MockClientFactory{}
+	plugin := initialisePlugin(t, clientFactory)
+
+	ctx := context.Background()
+	statements := dbplugin.Statements{}
+	expiration := time.Date(2020, 5, 26, 0, 0, 0, 0, time.UTC)
+
+	err := plugin.RenewUser(ctx, statements, "test_user", expiration)
+
+	if err != nil {
+		t.Errorf("Error renewing user: %s", err)
+	}
+}
+
 func initialisePlugin(t *testing.T, clientFactory *MockClientFactory) dbplugin.Database {
 	aerospike, err := plugin.New(clientFactory)
 	if err != nil {
