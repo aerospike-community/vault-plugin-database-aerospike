@@ -254,6 +254,42 @@ func TestRevokeUser(t *testing.T) {
 	}
 }
 
+func TestRotateRootCredentials(t *testing.T) {
+	passwordChanged := false
+	changePasswordUser := ""
+	changePasswordPassword := ""
+	clientFactory := &MockClientFactory{
+		OnChangePassword: func(user string, password string) {
+			passwordChanged = true
+			changePasswordUser = user
+			changePasswordPassword = password
+		},
+	}
+	plugin := initialisePlugin(t, clientFactory)
+
+	ctx := context.Background()
+	statements := []string{}
+	expectedUser := "test_admin_user"
+
+	newConfig, err := plugin.RotateRootCredentials(ctx, statements)
+
+	if err != nil {
+		t.Errorf("Error rotating root credentials: %s", err)
+	}
+	if !passwordChanged {
+		t.Error("Root password was not changed")
+	}
+	if changePasswordUser != expectedUser {
+		t.Errorf("Expected ChangePassword to be called with user '%s' but was '%s'", expectedUser, changePasswordUser)
+	}
+	if changePasswordPassword == "" {
+		t.Error("Expected non-empty new password")
+	}
+	if changePasswordPassword != newConfig["password"] {
+		t.Errorf("Expected new password '%s' to match the password in the returned config '%s'", changePasswordPassword, newConfig["password"])
+	}
+}
+
 func initialisePlugin(t *testing.T, clientFactory *MockClientFactory) dbplugin.Database {
 	aerospike, err := plugin.New(clientFactory)
 	if err != nil {
@@ -263,8 +299,8 @@ func initialisePlugin(t *testing.T, clientFactory *MockClientFactory) dbplugin.D
 	ctx := context.Background()
 	config := map[string]interface{}{
 		"host":     "test_host:3000",
-		"username": "test_user",
-		"password": "test_password",
+		"username": "test_admin_user",
+		"password": "test_admin_password",
 	}
 	_, err = aerospikePlugin.Init(ctx, config, false)
 	if err != nil {
