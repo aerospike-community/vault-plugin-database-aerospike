@@ -1,6 +1,6 @@
 # vault-plugin-database-aerospike
 
-A [Vault](https://www.vaultproject.io) plugin for [Aerospike](https://www.aerospike.com)
+A [Vault](https://www.vaultproject.io) plugin for [Aerospike](https://www.aerospike.com).
 
 This project uses the database plugin interface introduced in Vault version 0.7.1.
 
@@ -53,6 +53,16 @@ The [creation statements](https://www.vaultproject.io/api/secret/databases/index
 JSON Example:
 ```json
 { "roles": ["read", "user-admin"] }
+```
+
+Dynamic role creation example:
+```sh
+vault write database/roles/reader db_name=aerospike creation_statements='{"roles":["read"]}' default_ttl=1h max_ttl=24h
+```
+
+Static role creation example:
+```sh
+vault write database/static-roles/rwuser db_name=aerospike username=rwuser rotation_period=1h
 ```
 
 ### TLS config
