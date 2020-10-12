@@ -24,8 +24,10 @@ Sample commands for registering and starting to use the plugin:
 $ vault write sys/plugins/catalog/database/aerospike-database-plugin \
     sha256=$(openssl sha256 < vault-plugin-database-aerospike) \
     command="vault-plugin-database-aerospike"
+Success! Data written to: sys/plugins/catalog/database/aerospike-database-plugin
 
 $ vault secrets enable database
+Success! Enabled the database secrets engine at: database/
 
 # host follows the same convention used by the Aerospike command line tools (asadm, asinfo, ...)
 # The syntax is "<host1>[:<tlsname1>][:<port1>],..."
@@ -36,9 +38,11 @@ $ vault write database/config/aerospike \
     username='vaultadmin' \
     password='reallysecurepassword'
 
-# You should consider rotating the admin password. Note that if you do, the new password will never be made available
-# through Vault, so you should create a vault-specific database admin user for this.
+# You should consider rotating the admin password.
+# Note that if you do, the new password will never be made available through Vault,
+# so you should create a vault-specific database admin user for this.
 $ vault write -force database/rotate-root/aerospike
+Success! Data written to: database/rotate-root/aerospike
 ```
 
 If running the plugin on macOS you may run into an issue where the OS prevents it from being executed.
@@ -50,19 +54,54 @@ See [How to open an app that hasn't been notarized or is from an unidentified de
 
 The [creation statements](https://www.vaultproject.io/api/secret/databases/index.html#creation_statements) are defined as a JSON blob that has a an array of roles.
 
-JSON Example:
+JSON example:
 ```json
 { "roles": ["read", "user-admin"] }
 ```
 
-Dynamic role creation example:
+### Roles
+
+#### Dynamic role
+
+Sample commands for creating a dynamic role and generating credentials for it:
+
 ```sh
-vault write database/roles/reader db_name=aerospike creation_statements='{"roles":["read"]}' default_ttl=1h max_ttl=24h
+$ vault write database/roles/as-reader \
+    db_name=aerospike \
+    creation_statements='{"roles":["read"]}' \
+    default_ttl=1h \
+    max_ttl=24h
+Success! Data written to: database/roles/as-reader
+
+$ vault read database/creds/as-reader
+Key                Value
+---                -----
+lease_id           database/creds/as-reader/sCKFOMxr3bKx0MSyV2O9vOIt
+lease_duration     1h
+lease_renewable    true
+password           A1a-IMCI3TGEyZWDmiyn
+username           v-token-as-reader-yYbN28OzeWbw1e4r5Ayr-1602523665
 ```
 
-Static role creation example:
+#### Static role
+
+Sample commands for creating a static role and reading its current credentials (the user needs to already exist in Aerospike):
+
 ```sh
-vault write database/static-roles/rwuser db_name=aerospike username=rwuser rotation_period=1h
+$ vault write database/static-roles/as-rwuser \
+    db_name=aerospike \
+    username=rwuser \
+    rotation_period=1h
+Success! Data written to: database/static-roles/as-rwuser
+
+$ vault read database/static-creds/as-rwuser
+Key                    Value
+---                    -----
+last_vault_rotation    2020-10-12T18:03:01.4751843Z
+password               A1a-tZqNXpivBu6dfATJ
+rotation_period        1h
+ttl                    59m45s
+username               rwuser
 ```
 
 ### TLS config
