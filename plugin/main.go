@@ -4,7 +4,7 @@ import (
 	"log"
 	"os"
 
-	plugin "github.com/G-Research/vault-plugin-database-aerospike"
+	plugin "github.com/aerospike-community/vault-plugin-database-aerospike"
 	"github.com/hashicorp/vault/api"
 )
 
