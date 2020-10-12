@@ -6,7 +6,7 @@ This project uses the database plugin interface introduced in Vault version 0.7.
 
 ## Build
 
-Pre-built binaries for Linux, macOS and Windows can be found at [the releases page](https://github.com/G-Research/vault-plugin-database-aerospike/releases).
+Pre-built binaries for Linux, macOS and Windows can be found at [the releases page](https://github.com/aerospike-community/vault-plugin-database-aerospike/releases).
 
 For other platforms, there are not currently pre-built binaries available.
 
