@@ -1,4 +1,4 @@
-# vault-plugin-database-aerospike
+![vault-plugin-database-aerospike](logo/svg/Vault-plugin-database-Aerospike_SignatureLogo_RGB-Black.svg)
 
 A [Vault](https://www.vaultproject.io) plugin for [Aerospike](https://www.aerospike.com).
 
