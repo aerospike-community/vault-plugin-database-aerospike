@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/aerospike/aerospike-client-go"
+	"github.com/aerospike/aerospike-client-go/v5"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
@@ -45,8 +45,8 @@ func new() *Aerospike {
 		DisplayNameLen: 15,
 		RoleNameLen:    15,
 		// See https://www.aerospike.com/docs/guide/limitations.html
-		UsernameLen:    63,
-		Separator:      "-",
+		UsernameLen: 63,
+		Separator:   "-",
 	}
 
 	return &Aerospike{

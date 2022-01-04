@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/aerospike/aerospike-client-go"
+	"github.com/aerospike/aerospike-client-go/v5"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/mitchellh/mapstructure"
@@ -84,7 +84,7 @@ func (c *aerospikeConnectionProducer) Init(ctx context.Context, conf map[string]
 
 	if verifyConnection {
 		if _, err := c.Connection(ctx); err != nil {
-			return nil, errwrap.Wrapf("error verifying connection: {{err}}", err)
+			return nil, errwrap.Wrapf("error verifying connection: {{err}} : {{c}}", err)
 		}
 
 		if !c.client.IsConnected() {
