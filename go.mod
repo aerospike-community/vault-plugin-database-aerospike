@@ -1,9 +1,9 @@
 module github.com/aerospike-community/vault-plugin-database-aerospike
 
-go 1.23
+go 1.17
 
 require (
-	github.com/aerospike/aerospike-client-go v4.5.2+incompatible
+	github.com/aerospike/aerospike-client-go/v5 v5.7.0
 	github.com/hashicorp/errwrap v1.1.0
 	github.com/hashicorp/vault/api v1.3.1
 	github.com/hashicorp/vault/sdk v0.3.0
@@ -11,7 +11,6 @@ require (
 )
 
 require (
-	github.com/aerospike/aerospike-client-go/v5 v5.7.0 // indirect
 	github.com/armon/go-metrics v0.3.10 // indirect
 	github.com/armon/go-radix v1.0.0 // indirect
 	github.com/cenkalti/backoff/v3 v3.2.2 // indirect
@@ -42,8 +41,6 @@ require (
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/oklog/run v1.1.0 // indirect
-	github.com/onsi/ginkgo v1.16.4 // indirect
-	github.com/onsi/gomega v1.15.0 // indirect
 	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/yuin/gopher-lua v0.0.0-20210529063254-f4c35e4016d9 // indirect
