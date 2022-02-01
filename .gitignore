@@ -1,1 +1,4 @@
 dist/
+
+# Aerospike features.conf should be kept secret
+features.conf

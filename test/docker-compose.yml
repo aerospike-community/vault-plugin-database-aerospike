@@ -1,0 +1,10 @@
+version: "3.0"
+
+services:
+  aerospike:
+    image: aerospike/aerospike-server-enterprise:5.0.0.3
+    command: ["--config-file", "/opt/aerospike/etc/aerospike.conf"]
+    volumes:
+      - "./aerospike_config:/opt/aerospike/etc"
+    ports:
+      - "3000:3000"

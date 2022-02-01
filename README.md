@@ -132,3 +132,24 @@ $ vault write database/config/aerospike \
     username='vaultadmin' \
     password='reallysecurepassword'
 ```
+
+## Testing
+
+Integration tests can be run against an Aerospike database running in Docker.
+This requires a valid `features.conf` file to be present in the `test/aerospike_config` directory so that
+security features of the Aerospike enterprise edition can be enabled.
+
+Run the Aerospike server with:
+```sh
+docker-compose -f test/docker-compose.yml up
+```
+
+Then the integration tests can be run in a separate shell with:
+```sh
+go test -tags=integration
+```
+
+You can also run the tests against any Aerospike database by specifying the host and admin user credentials:
+```sh
+go test -tags=integration -host=localhost -port=3000 -username=admin -password=admin
+```
