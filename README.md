@@ -132,3 +132,7 @@ $ vault write database/config/aerospike \
     username='vaultadmin' \
     password='reallysecurepassword'
 ```
+
+## Security
+
+Please see our [security policy](https://github.com/aerospike-community/vault-plugin-database-aerospike/blob/master/SECURITY.md) for details on reporting security vulnerabilities.
